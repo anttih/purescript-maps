@@ -10,6 +10,7 @@ module Data.Map
   , checkValid
   , insert
   , lookup
+  , lookupGT
   , toList
   , fromList
   , fromListWith
@@ -122,6 +123,21 @@ lookup k (Three _ _ _ _ k2 v2 _) | k == k2 = Just v2
 lookup k (Three left k1 _ _ _ _ _) | k < k1 = lookup k left
 lookup k (Three _ k1 _ mid k2 _ _) | k1 < k && k <= k2 = lookup k mid
 lookup k (Three _ _ _ _ _ _ right) = lookup k right
+
+-- | Find the smallest key that is greater than the given one and
+-- | return the corresponding key/value pair.
+lookupGT :: forall k v. (Ord k) => k -> Map k v -> Maybe (Tuple k v)
+lookupGT k m = lookup' k Nothing m
+  where
+  lookup' :: k -> Maybe (Tuple k v) -> Map k v -> Maybe (Tuple k v)
+  lookup' k kx Leaf = kx
+  lookup' k kx (Two _ k1 _ right) | k >= k1 = lookup' k kx right
+  lookup' k kx (Two left k1 v _) | k < k1 = lookup' k (Just (Tuple k1 v)) left
+  lookup' k kx (Two _ _ _ right) = lookup' k kx right
+  lookup' k kx (Three left k1 v _ _ _ _) | k < k1 = lookup' k (Just (Tuple k1 v)) left
+  lookup' k kx (Three _ k1 _ mid _ _ _) | k == k1 = lookup' k kx mid
+  lookup' k kx (Three _ _ _ mid k2 v2 _) | k < k2 = lookup' k (Just (Tuple k2 v2)) mid
+  lookup' k kx (Three _ _ _ _ k2 v2 right) = lookup' k kx right
 
 -- | Test if a key is a member of a map
 member :: forall k v. (Ord k) => k -> Map k v -> Boolean
